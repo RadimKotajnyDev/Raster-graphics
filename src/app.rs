@@ -1,5 +1,6 @@
 use crate::vram::VRam;
 use eframe::egui::{self, TextureHandle, Vec2};
+use crate::exercises;
 
 pub struct MyApp {
     pub vram: VRam,
@@ -8,22 +9,9 @@ pub struct MyApp {
 
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-
-        const BLUE: u8 = 128;
-
         let mut vram = VRam::new(256, 256);
 
-        for y in 0..(vram.height / 2) {
-            for x in 0..vram.width {
-                vram.set_pixel(x, y, x as u8, y as u8, BLUE);
-            }
-        }
-
-        for y in (vram.height / 2..vram.height).rev() {
-            for x in 0..vram.width {
-                vram.set_pixel(x, y, x as u8, y as u8, BLUE);
-            }
-        }
+        exercises::cv01_rgb::exercise_one(&mut vram);
 
         let texture = Some(cc.egui_ctx.load_texture(
             "framebuffer",

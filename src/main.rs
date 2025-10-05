@@ -1,5 +1,7 @@
 mod vram;
 mod app;
+mod exercises;
+mod tasks;
 
 use app::MyApp;
 
