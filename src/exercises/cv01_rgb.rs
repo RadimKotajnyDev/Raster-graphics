@@ -1,3 +1,5 @@
+// 1 Konstrukce RGB modelu (čtverec o straně 256 - X:Red, Y:Green, Blue - Konstanta)
+
 use crate::vram::VRam;
 
 pub fn exercise_one(vram: &mut VRam) {

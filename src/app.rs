@@ -13,6 +13,8 @@ impl MyApp {
 
         exercises::cv01_rgb::exercise_one(&mut vram);
 
+        exercises::cv02_images::grayscale(&mut vram);
+
         let texture = Some(cc.egui_ctx.load_texture(
             "framebuffer",
             vram.to_color_image(),
@@ -30,12 +32,8 @@ impl eframe::App for MyApp {
                 if ui.button("Load Image").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Ok(img) = image::open(&path) {
-                            let rgba = img.to_rgba8();
-                            self.vram = VRam::new(rgba.width(), rgba.height());
-                            for (x, y, pixel) in rgba.enumerate_pixels() {
-                                let [r, g, b, _a] = pixel.0;
-                                self.vram.set_pixel(x, y, r, g, b);
-                            }
+                            // Load the imported image directly into VRAM
+                            self.vram.set_from_dynamic_image(&img);
                             self.texture = Some(ctx.load_texture(
                                 "framebuffer",
                                 self.vram.to_color_image(),
