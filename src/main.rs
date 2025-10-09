@@ -2,6 +2,7 @@ mod vram;
 mod app;
 mod exercises;
 mod tasks;
+mod utils;
 
 use app::MyApp;
 
