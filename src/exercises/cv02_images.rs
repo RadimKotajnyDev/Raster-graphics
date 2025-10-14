@@ -15,17 +15,6 @@ pub fn grayscale(vram: &mut VRam) {
         }
     }
 }
-pub fn hue_shift(vram: &mut VRam, shift: i32) {
-    for y in 0..vram.height {
-        for x in 0..vram.width {
-            if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
-                let hsl = utils::rgb_to_hsl(r, g, b);
-                let rgb = utils::hsl_to_rgb(hsl.hue + shift as f32, hsl.saturation, hsl.lightness);
-                vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
-            }
-        }
-    }
-}
 
 pub fn saturate_image(vram: &mut VRam, level: u32) {
     for y in 0..vram.height {
@@ -33,6 +22,18 @@ pub fn saturate_image(vram: &mut VRam, level: u32) {
             if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
                 let hsl = utils::rgb_to_hsl(r, g, b);
                 let rgb = utils::hsl_to_rgb(hsl.hue, level as f32, hsl.lightness);
+                vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
+            }
+        }
+    }
+}
+
+pub fn hue_shift(vram: &mut VRam, shift: i32) {
+    for y in 0..vram.height {
+        for x in 0..vram.width {
+            if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
+                let hsl = utils::rgb_to_hsl(r, g, b);
+                let rgb = utils::hsl_to_rgb(hsl.hue + shift as f32, hsl.saturation, hsl.lightness);
                 vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
             }
         }
