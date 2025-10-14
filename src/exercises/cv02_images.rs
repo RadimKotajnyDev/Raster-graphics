@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use crate::utils;
 use crate::vram::VRam;
+use num;
 
 // 2 Práce s obrazem - Grayscale, Saturace, Hue
 
@@ -16,12 +17,15 @@ pub fn grayscale(vram: &mut VRam) {
     }
 }
 
-pub fn saturate_image(vram: &mut VRam, level: u32) {
+pub fn saturate_image(vram: &mut VRam, ratio: f32) {
     for y in 0..vram.height {
         for x in 0..vram.width {
             if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
                 let hsl = utils::rgb_to_hsl(r, g, b);
-                let rgb = utils::hsl_to_rgb(hsl.hue, level as f32, hsl.lightness);
+
+                let saturation = num::clamp(hsl.saturation + ratio, 0.0, 1.0);
+
+                let rgb = utils::hsl_to_rgb(hsl.hue, saturation, hsl.lightness);
                 vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
             }
         }

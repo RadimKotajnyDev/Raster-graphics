@@ -37,7 +37,8 @@ impl eframe::App for MyApp {
                             self.vram.set_from_dynamic_image(&img);
 
                             // Make changes to the uploaded image here:
-                            exercises::cv02_images::hue_shift(&mut self.vram, -270);
+                            // exercises::cv02_images::hue_shift(&mut self.vram, -270);
+                            exercises::cv02_images::saturate_image(&mut self.vram, 0.25);
 
                             // Update texture after processing
                             self.texture = Some(ctx.load_texture(

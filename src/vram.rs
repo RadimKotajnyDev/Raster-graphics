@@ -85,6 +85,6 @@ impl VRam {
                 img.put_pixel(x, y, Rgba([r, g, b, a]));
             }
         }
-        img.save(path).unwrap();
+        img.save(path).expect("Failed to save PNG");
     }
 }
