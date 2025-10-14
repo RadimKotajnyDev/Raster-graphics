@@ -11,9 +11,10 @@ impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut vram = VRam::new(256, 256);
 
-        exercises::cv01_rgb::exercise_one(&mut vram);
+        // exercises::cv01_rgb::exercise_one(&mut vram);
 
-        exercises::cv02_images::grayscale(&mut vram);
+        // exercises::cv02_images::grayscale(&mut vram);
+        exercises::cv02_images::saturate_image(&mut vram, 0.5);
 
         let texture = Some(cc.egui_ctx.load_texture(
             "framebuffer",
