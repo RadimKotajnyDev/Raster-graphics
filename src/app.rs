@@ -9,12 +9,12 @@ pub struct MyApp {
 
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mut vram = VRam::new(256, 256);
+        let vram = VRam::new(256, 256);
 
         // exercises::cv01_rgb::exercise_one(&mut vram);
 
         // exercises::cv02_images::grayscale(&mut vram);
-        exercises::cv02_images::saturate_image(&mut vram, 0.5);
+        // exercises::cv02_images::saturate_image(&mut vram, 0.5);
 
         let texture = Some(cc.egui_ctx.load_texture(
             "framebuffer",
@@ -35,6 +35,11 @@ impl eframe::App for MyApp {
                         if let Ok(img) = image::open(&path) {
                             // Load the imported image directly into VRAM
                             self.vram.set_from_dynamic_image(&img);
+
+                            // Make changes to the uploaded image here:
+                            exercises::cv02_images::hue_shift(&mut self.vram, -270);
+
+                            // Update texture after processing
                             self.texture = Some(ctx.load_texture(
                                 "framebuffer",
                                 self.vram.to_color_image(),

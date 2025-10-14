@@ -1,6 +1,7 @@
-// 1 Konstrukce RGB modelu (čtverec o straně 256 - X:Red, Y:Green, Blue - Konstanta)
-
+#![allow(dead_code)]
 use crate::vram::VRam;
+
+// 1 Konstrukce RGB modelu (čtverec o straně 256 - X:Red, Y:Green, Blue - Konstanta)
 
 pub fn exercise_one(vram: &mut VRam) {
     const BLUE: u8 = 128;
