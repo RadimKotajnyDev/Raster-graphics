@@ -3,6 +3,7 @@ use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
 use std::path::PathBuf;
 
 /// Virtual framebuffer (like your V_RAM class)
+#[derive(Clone)]
 pub struct VRam {
     pub width: u32,
     pub height: u32,
