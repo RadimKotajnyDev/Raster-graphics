@@ -10,7 +10,7 @@ pub struct MyApp {
     saturation: f32,
     hue: f32,
     // Debounce support
-    last_sat_change: Option<Instant>,
+    last_edit_change: Option<Instant>,
     debounce: Duration,
     // Keep original image to re-apply effects without compounding
     original_vram: VRam,
@@ -39,7 +39,7 @@ impl MyApp {
             texture,
             saturation: 0.0,
             hue: 0.0,
-            last_sat_change: None,
+            last_edit_change: None,
             debounce: Duration::from_millis(300),
             show_edit_menu: false,
         }
@@ -106,12 +106,12 @@ impl eframe::App for MyApp {
                     );
 
                     if saturate_interaction.changed() || hue_interaction.changed() {
-                        self.last_sat_change = Some(Instant::now());
+                        self.last_edit_change = Some(Instant::now());
                     }
 
                     // Apply debounced update after a quiet period
                     let should_apply = self
-                        .last_sat_change
+                        .last_edit_change
                         .map(|t| t.elapsed() >= self.debounce)
                         .unwrap_or(false);
 
@@ -131,7 +131,7 @@ impl eframe::App for MyApp {
                         ));
 
                         // Clear pending state
-                        self.last_sat_change = None;
+                        self.last_edit_change = None;
                     }
                 })
             {
@@ -163,7 +163,7 @@ impl eframe::App for MyApp {
 
                 ui.centered_and_justified(|ui| {
                     let resp = ui.image((tex.id(), size));
-                    if self.last_sat_change.is_some() {
+                    if self.last_edit_change.is_some() {
                         let rect = resp.rect;
                         let painter = ui.painter();
                         painter.rect_filled(rect, 0.0, egui::Color32::from_black_alpha(160));
