@@ -8,6 +8,7 @@ pub struct MyApp {
     pub texture: Option<TextureHandle>,
     // UI state
     saturation: f32,
+    hue: f32,
     // Debounce support
     last_sat_change: Option<Instant>,
     debounce: Duration,
@@ -37,8 +38,9 @@ impl MyApp {
             vram,
             texture,
             saturation: 0.0,
+            hue: 0.0,
             last_sat_change: None,
-            debounce: Duration::from_millis(150),
+            debounce: Duration::from_millis(300),
             show_edit_menu: false,
         }
     }
@@ -86,11 +88,15 @@ impl eframe::App for MyApp {
                 .resizable(false)
                 .open(&mut self.show_edit_menu)
                 .show(ctx, |ui| {
-                    let response = ui.add(
-                        egui::Slider::new(&mut self.saturation, -1.0..=1.0).text("Saturation"),
+                    let saturate_interaction = ui.add(
+                        egui::Slider::new(&mut self.saturation, -1.0..=1.0).text("Saturation")
                     );
 
-                    if response.changed() {
+                    let hue_interaction = ui.add(
+                        egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)")
+                    );
+
+                    if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_sat_change = Some(Instant::now());
                     }
 
@@ -103,7 +109,10 @@ impl eframe::App for MyApp {
                     if should_apply {
                         // Reset to original and apply effect
                         self.vram = self.original_vram.clone();
+
+                        // Apply all current adjustments; debounce is based on time since last change
                         exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                        exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
 
                         // Update texture after processing
                         self.texture = Some(ctx.load_texture(
