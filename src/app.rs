@@ -69,7 +69,16 @@ impl eframe::App for MyApp {
                 }
 
                 if ui.button("Save as PNG").clicked() {
-                    if let Some(path) = rfd::FileDialog::new().save_file() {
+                    if let Some(mut path) = rfd::FileDialog::new().save_file() {
+                        // Ensure the file has a .png extension to avoid crashes in the image encoder
+                        let is_png = path
+                            .extension()
+                            .and_then(|s| s.to_str())
+                            .map(|ext| ext.eq_ignore_ascii_case("png"))
+                            .unwrap_or(false);
+                        if !is_png {
+                            path.set_extension("png");
+                        }
                         self.vram.save_png(&path);
                     }
                 }
