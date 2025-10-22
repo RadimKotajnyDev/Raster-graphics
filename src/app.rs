@@ -1,6 +1,6 @@
+use crate::exercises;
 use crate::vram::VRam;
 use eframe::egui::{self, TextureHandle, Vec2};
-use crate::exercises;
 use std::time::{Duration, Instant};
 
 pub struct MyApp {
@@ -12,7 +12,7 @@ pub struct MyApp {
     // Debounce support
     last_edit_change: Option<Instant>,
     debounce: Duration,
-    // Keep original image to re-apply effects without compounding
+    // Keep the original image to re-apply effects without compounding
     original_vram: VRam,
     // Persistent menu visibility
     show_edit_menu: bool,
@@ -98,14 +98,17 @@ impl eframe::App for MyApp {
                 .open(&mut self.show_edit_menu)
                 .show(ctx, |ui| {
                     let saturate_interaction = ui.add(
-                        egui::Slider::new(&mut self.saturation, -1.0..=1.0).text("Saturation")
+                        egui::Slider::new(&mut self.saturation, -1.0..=1.0).text("Saturation"),
                     );
 
-                    let hue_interaction = ui.add(
-                        egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)")
-                    );
+                    let hue_interaction = ui
+                        .add(egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)"));
 
-                    if saturate_interaction.changed() || hue_interaction.changed() {
+                    let convolution_button =  ui.add(egui::Button::new("Convolution"));
+
+                    if saturate_interaction.changed()
+                        || hue_interaction.changed()
+                        || convolution_button.clicked()  {
                         self.last_edit_change = Some(Instant::now());
                     }
 
@@ -116,12 +119,15 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
-                        // Reset to original and apply effect
+                        // Reset to the original and apply effect
                         self.vram = self.original_vram.clone();
 
                         // Apply all current adjustments; debounce is based on time since last change
+
+                        // TODO: optimize this
                         exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
                         exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                        exercises::cv03_convolution::convolution(&mut self.vram);
 
                         // Update texture after processing
                         self.texture = Some(ctx.load_texture(
@@ -150,6 +156,10 @@ impl eframe::App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(tex) = &self.texture {
+                // Ensure the spinner animates by repainting while a change is pending
+                if self.last_edit_change.is_some() {
+                    ctx.request_repaint_after(Duration::from_millis(16));
+                }
                 let available = ui.available_size();
 
                 let img_aspect = self.vram.width as f32 / self.vram.height as f32;
