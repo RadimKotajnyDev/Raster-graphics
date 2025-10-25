@@ -8,11 +8,11 @@ pub struct MyApp {
     pub texture: Option<TextureHandle>,
     saturation: f32,
     hue: f32,
-    // Debounce support
     last_edit_change: Option<Instant>,
     debounce: Duration,
     original_vram: VRam,
     show_edit_menu: bool,
+    pending_convolution: bool,
 }
 
 impl MyApp {
@@ -39,6 +39,7 @@ impl MyApp {
             last_edit_change: None,
             debounce: Duration::from_millis(300),
             show_edit_menu: false,
+            pending_convolution: false,
         }
     }
 }
@@ -102,15 +103,19 @@ impl eframe::App for MyApp {
 
                     if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_edit_change = Some(Instant::now());
+                        self.pending_convolution = false;
                     }
 
                     if convolution_button.clicked() {
+                        let snapshot_start = Instant::now();
+
                         exercises::cv03_convolution::convolution(&mut self.vram);
-                        self.texture = Some(ctx.load_texture(
-                            "framebuffer",
-                            self.vram.to_color_image(),
-                            egui::TextureOptions::NEAREST,
-                        ));
+
+                        let duration = snapshot_start.elapsed();
+                        println!("Convolution took: {:.2?}", duration);
+
+                        self.pending_convolution = true;
+                        self.last_edit_change = Some(Instant::now());
                     }
 
                     let should_apply = self
@@ -119,20 +124,23 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
-                        let snapshot_start = Instant::now();
+                        if !self.pending_convolution {
+                            let snapshot_start = Instant::now();
 
-                        self.vram = self.original_vram.clone();
+                            // Reset to original and apply all changes
+                            self.vram = self.original_vram.clone();
 
-                        if self.saturation != 0.0 {
-                            exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                            if self.saturation != 0.0 {
+                                exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                            }
+
+                            if self.hue != 0.0 {
+                                exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                            }
+
+                            let duration = snapshot_start.elapsed();
+                            println!("Image processing took: {:.2?}", duration);
                         }
-
-                        if self.hue != 0.0 {
-                            exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
-                        }
-
-                        let duration = snapshot_start.elapsed();
-                        println!("Image processing took: {:.2?}", duration);
 
                         self.texture = Some(ctx.load_texture(
                             "framebuffer",
@@ -141,6 +149,7 @@ impl eframe::App for MyApp {
                         ));
 
                         self.last_edit_change = None;
+                        self.pending_convolution = false;
                     }
                 })
             {
