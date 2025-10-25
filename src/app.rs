@@ -100,9 +100,18 @@ impl eframe::App for MyApp {
 
                     let convolution_button =  ui.add(egui::Button::new("Convolution"));
 
-                    if saturate_interaction.changed()
-                        || hue_interaction.changed()
-                        || convolution_button.clicked()  {
+                    if saturate_interaction.changed() {
+                        exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                        self.last_edit_change = Some(Instant::now());
+                    }
+
+                    if hue_interaction.changed() {
+                        exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                        self.last_edit_change = Some(Instant::now());
+                    }
+
+                    if convolution_button.clicked() {
+                        exercises::cv03_convolution::convolution(&mut self.vram);
                         self.last_edit_change = Some(Instant::now());
                     }
 
@@ -112,20 +121,11 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
-                        self.vram = self.original_vram.clone();
-
-
-                        // TODO: optimize this
-                        exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
-                        exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
-                        exercises::cv03_convolution::convolution(&mut self.vram);
-
                         self.texture = Some(ctx.load_texture(
                             "framebuffer",
                             self.vram.to_color_image(),
                             egui::TextureOptions::NEAREST,
                         ));
-
                         self.last_edit_change = None;
                     }
                 })
