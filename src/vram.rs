@@ -2,12 +2,11 @@ use egui::{Color32, ColorImage, Vec2};
 use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
 use std::path::PathBuf;
 
-/// Virtual framebuffer (like your V_RAM class)
 #[derive(Clone)]
 pub struct VRam {
     pub width: u32,
     pub height: u32,
-    pub data: Vec<u32>, // store ARGB pixels
+    pub data: Vec<u32>,
 }
 
 impl VRam {
@@ -40,8 +39,7 @@ impl VRam {
             self.data[(y * self.width + x) as usize] = argb;
         }
     }
-
-    /// Replace VRAM contents from an RGBA image (ignores alpha for now).
+    
     pub fn set_from_rgba8(&mut self, rgba: &RgbaImage) {
         self.width = rgba.width();
         self.height = rgba.height();
@@ -51,8 +49,7 @@ impl VRam {
             self.set_pixel(x, y, r, g, b);
         }
     }
-
-    /// Replace VRAM contents from any DynamicImage.
+    
     pub fn set_from_dynamic_image(&mut self, img: &DynamicImage) {
         let rgba = img.to_rgba8();
         self.set_from_rgba8(&rgba);

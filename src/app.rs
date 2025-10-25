@@ -6,15 +6,12 @@ use std::time::{Duration, Instant};
 pub struct MyApp {
     pub vram: VRam,
     pub texture: Option<TextureHandle>,
-    // UI state
     saturation: f32,
     hue: f32,
     // Debounce support
     last_edit_change: Option<Instant>,
     debounce: Duration,
-    // Keep the original image to re-apply effects without compounding
     original_vram: VRam,
-    // Persistent menu visibility
     show_edit_menu: bool,
 }
 
@@ -53,12 +50,11 @@ impl eframe::App for MyApp {
                 if ui.button("Load Image").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Ok(img) = image::open(&path) {
-                            // Load the imported image directly into VRAM
+
                             self.vram.set_from_dynamic_image(&img);
-                            // Keep a pristine copy for re-applying effects
+
                             self.original_vram = self.vram.clone();
 
-                            // Update texture after processing
                             self.texture = Some(ctx.load_texture(
                                 "framebuffer",
                                 self.vram.to_color_image(),
@@ -70,7 +66,6 @@ impl eframe::App for MyApp {
 
                 if ui.button("Save as PNG").clicked() {
                     if let Some(mut path) = rfd::FileDialog::new().save_file() {
-                        // Ensure the file has a .png extension to avoid crashes in the image encoder
                         let is_png = path
                             .extension()
                             .and_then(|s| s.to_str())
@@ -89,7 +84,6 @@ impl eframe::App for MyApp {
             });
         });
 
-        // Persistent Edit image menu window (closes only on outside click)
         if self.show_edit_menu {
             if let Some(win) = egui::Window::new("Edit image")
                 .title_bar(false)
@@ -112,31 +106,26 @@ impl eframe::App for MyApp {
                         self.last_edit_change = Some(Instant::now());
                     }
 
-                    // Apply debounced update after a quiet period
                     let should_apply = self
                         .last_edit_change
                         .map(|t| t.elapsed() >= self.debounce)
                         .unwrap_or(false);
 
                     if should_apply {
-                        // Reset to the original and apply effect
                         self.vram = self.original_vram.clone();
 
-                        // Apply all current adjustments; debounce is based on time since last change
 
                         // TODO: optimize this
                         exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
                         exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
                         exercises::cv03_convolution::convolution(&mut self.vram);
 
-                        // Update texture after processing
                         self.texture = Some(ctx.load_texture(
                             "framebuffer",
                             self.vram.to_color_image(),
                             egui::TextureOptions::NEAREST,
                         ));
 
-                        // Clear pending state
                         self.last_edit_change = None;
                     }
                 })
@@ -156,7 +145,6 @@ impl eframe::App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(tex) = &self.texture {
-                // Ensure the spinner animates by repainting while a change is pending
                 if self.last_edit_change.is_some() {
                     ctx.request_repaint_after(Duration::from_millis(16));
                 }
