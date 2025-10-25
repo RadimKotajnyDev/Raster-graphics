@@ -98,21 +98,19 @@ impl eframe::App for MyApp {
                     let hue_interaction = ui
                         .add(egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)"));
 
-                    let convolution_button =  ui.add(egui::Button::new("Convolution"));
+                    let convolution_button = ui.add(egui::Button::new("Convolution"));
 
-                    if saturate_interaction.changed() {
-                        exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
-                        self.last_edit_change = Some(Instant::now());
-                    }
-
-                    if hue_interaction.changed() {
-                        exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                    if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_edit_change = Some(Instant::now());
                     }
 
                     if convolution_button.clicked() {
                         exercises::cv03_convolution::convolution(&mut self.vram);
-                        self.last_edit_change = Some(Instant::now());
+                        self.texture = Some(ctx.load_texture(
+                            "framebuffer",
+                            self.vram.to_color_image(),
+                            egui::TextureOptions::NEAREST,
+                        ));
                     }
 
                     let should_apply = self
@@ -121,11 +119,27 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
+                        let snapshot_start = Instant::now();
+
+                        self.vram = self.original_vram.clone();
+
+                        if self.saturation != 0.0 {
+                            exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                        }
+
+                        if self.hue != 0.0 {
+                            exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                        }
+
+                        let duration = snapshot_start.elapsed();
+                        println!("Image processing took: {:.2?}", duration);
+
                         self.texture = Some(ctx.load_texture(
                             "framebuffer",
                             self.vram.to_color_image(),
                             egui::TextureOptions::NEAREST,
                         ));
+
                         self.last_edit_change = None;
                     }
                 })
@@ -134,8 +148,8 @@ impl eframe::App for MyApp {
                 let clicked_outside = ctx.input(|i| {
                     i.pointer.any_pressed()
                         && i.pointer
-                            .interact_pos()
-                            .map_or(false, |p| !rect.contains(p))
+                        .interact_pos()
+                        .map_or(false, |p| !rect.contains(p))
                 });
                 if clicked_outside {
                     self.show_edit_menu = false;
