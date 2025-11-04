@@ -1,5 +1,6 @@
 use crate::exercises;
 use crate::vram::VRam;
+use crate::tasks;
 use eframe::egui::{self, TextureHandle, Vec2};
 use std::time::{Duration, Instant};
 
@@ -13,6 +14,7 @@ pub struct MyApp {
     original_vram: VRam,
     show_edit_menu: bool,
     pending_convolution: bool,
+    pending_red_eye_removal: bool
 }
 
 impl MyApp {
@@ -40,6 +42,7 @@ impl MyApp {
             debounce: Duration::from_millis(300),
             show_edit_menu: false,
             pending_convolution: false,
+            pending_red_eye_removal: false
         }
     }
 }
@@ -101,9 +104,24 @@ impl eframe::App for MyApp {
 
                     let convolution_button = ui.add(egui::Button::new("Convolution"));
 
+                    let red_eye_removal_button = ui.add(egui::Button::new("Remove red eyes"));
+
                     if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_edit_change = Some(Instant::now());
                         self.pending_convolution = false;
+                        self.pending_red_eye_removal = false;
+                    }
+
+                    if red_eye_removal_button.clicked() {
+                        let snapshot_start = Instant::now();
+
+                        tasks::ku1::red_eye_removal(&mut self.vram);
+
+                        let duration = snapshot_start.elapsed();
+                        println!("Red eye removal took: {:.2?}", duration);
+
+                        self.pending_red_eye_removal = true;
+                        self.last_edit_change = Some(Instant::now());
                     }
 
                     if convolution_button.clicked() {
@@ -124,7 +142,7 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
-                        if !self.pending_convolution {
+                        if !self.pending_convolution || !self.pending_red_eye_removal {
                             let snapshot_start = Instant::now();
 
                             // Reset to original and apply all changes
