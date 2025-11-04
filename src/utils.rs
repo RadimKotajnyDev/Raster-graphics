@@ -41,7 +41,6 @@ pub fn rgb_to_hsl(r: u8, g: u8, b: u8) -> HSL {
         hue += 360.0;
     }
 
-    // return statement
     HSL { hue, saturation, lightness }
 }
 
