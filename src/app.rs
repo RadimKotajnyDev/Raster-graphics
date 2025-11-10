@@ -46,6 +46,7 @@ impl MyApp {
 }
 
 impl eframe::App for MyApp {
+    /*
     fn handle_task<F>(&mut self, log_message: &str, task_fn: F)
     where
         F: FnOnce(&mut VRam),
@@ -64,6 +65,7 @@ impl eframe::App for MyApp {
         // The common part
         self.last_edit_change = Some(Instant::now());
     }
+     */
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
@@ -86,7 +88,9 @@ impl eframe::App for MyApp {
                 }
 
                 if ui.button("Save as PNG").clicked() {
-                    if let Some(mut path) = rfd::FileDialog::new().save_file() {
+                    if let Some(mut path) = rfd::FileDialog::new()
+                        .add_filter("PNG Image", &["png"])
+                        .save_file() {
                         let is_png = path
                             .extension()
                             .and_then(|s| s.to_str())
