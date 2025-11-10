@@ -13,8 +13,7 @@ pub struct MyApp {
     debounce: Duration,
     original_vram: VRam,
     show_edit_menu: bool,
-    pending_convolution: bool,
-    pending_red_eye_removal: bool
+    pub is_change_pending: bool
 }
 
 impl MyApp {
@@ -41,13 +40,31 @@ impl MyApp {
             last_edit_change: None,
             debounce: Duration::from_millis(300),
             show_edit_menu: false,
-            pending_convolution: false,
-            pending_red_eye_removal: false
+            is_change_pending: false,
         }
     }
 }
 
 impl eframe::App for MyApp {
+    fn handle_task<F>(&mut self, log_message: &str, task_fn: F)
+    where
+        F: FnOnce(&mut VRam),
+    {
+        let snapshot_start = Instant::now();
+
+        task_fn(&mut self.vram);
+
+        let duration = snapshot_start.elapsed();
+
+        println!("{}: {:.2?}", log_message, duration);
+
+        // Directly set the single flag
+        self.is_change_pending = true;
+
+        // The common part
+        self.last_edit_change = Some(Instant::now());
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -106,10 +123,11 @@ impl eframe::App for MyApp {
 
                     let red_eye_removal_button = ui.add(egui::Button::new("Remove red eyes"));
 
+                    let convolution_smoothing_button = ui.add(egui::Button::new("Convolution smoothing"));
+
                     if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_edit_change = Some(Instant::now());
-                        self.pending_convolution = false;
-                        self.pending_red_eye_removal = false;
+                        self.is_change_pending = false;
                     }
 
                     if red_eye_removal_button.clicked() {
@@ -120,8 +138,19 @@ impl eframe::App for MyApp {
                         let duration = snapshot_start.elapsed();
                         println!("Red eye removal took: {:.2?}", duration);
 
-                        self.pending_red_eye_removal = true;
+                        self.is_change_pending = true;
                         self.last_edit_change = Some(Instant::now());
+                    }
+
+                    if convolution_smoothing_button.clicked() {
+                        let snapshot_start = Instant::now();
+
+                        tasks::ku1::convolution_smoothing(&mut self.vram);
+
+                        let duration = snapshot_start.elapsed();
+                        println!("Red eye removal took: {:.2?}", duration);
+
+
                     }
 
                     if convolution_button.clicked() {
@@ -132,7 +161,7 @@ impl eframe::App for MyApp {
                         let duration = snapshot_start.elapsed();
                         println!("Convolution took: {:.2?}", duration);
 
-                        self.pending_convolution = true;
+                        self.is_change_pending = true;
                         self.last_edit_change = Some(Instant::now());
                     }
 
@@ -142,7 +171,7 @@ impl eframe::App for MyApp {
                         .unwrap_or(false);
 
                     if should_apply {
-                        if !self.pending_convolution || !self.pending_red_eye_removal {
+                        if !self.is_change_pending {
                             let snapshot_start = Instant::now();
 
                             // Reset to original and apply all changes
@@ -167,7 +196,7 @@ impl eframe::App for MyApp {
                         ));
 
                         self.last_edit_change = None;
-                        self.pending_convolution = false;
+                        self.is_change_pending = false;
                     }
                 })
             {
