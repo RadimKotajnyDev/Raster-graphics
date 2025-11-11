@@ -3,6 +3,7 @@ use crate::vram::VRam;
 use crate::tasks;
 use eframe::egui::{self, TextureHandle, Vec2};
 use std::time::{Duration, Instant};
+use crate::kernel::Kernel;
 
 pub struct MyApp {
     pub vram: VRam,
@@ -46,27 +47,6 @@ impl MyApp {
 }
 
 impl eframe::App for MyApp {
-    /*
-    fn handle_task<F>(&mut self, log_message: &str, task_fn: F)
-    where
-        F: FnOnce(&mut VRam),
-    {
-        let snapshot_start = Instant::now();
-
-        task_fn(&mut self.vram);
-
-        let duration = snapshot_start.elapsed();
-
-        println!("{}: {:.2?}", log_message, duration);
-
-        // Directly set the single flag
-        self.is_change_pending = true;
-
-        // The common part
-        self.last_edit_change = Some(Instant::now());
-    }
-     */
-
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -149,12 +129,14 @@ impl eframe::App for MyApp {
                     if convolution_smoothing_button.clicked() {
                         let snapshot_start = Instant::now();
 
-                        tasks::ku1::convolution_smoothing(&mut self.vram);
+                        let kernel = Kernel::create_blur(3);
+                        tasks::ku1::convolution_smoothing(&mut self.vram, &kernel, 20);
 
                         let duration = snapshot_start.elapsed();
-                        println!("Red eye removal took: {:.2?}", duration);
+                        println!("Convolution smoothing took: {:.2?}", duration);
 
-
+                        self.is_change_pending = true;
+                        self.last_edit_change = Some(Instant::now());
                     }
 
                     if convolution_button.clicked() {

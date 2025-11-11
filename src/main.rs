@@ -3,6 +3,7 @@ mod app;
 mod exercises;
 mod tasks;
 mod utils;
+mod kernel;
 
 use app::MyApp;
 

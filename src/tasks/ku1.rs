@@ -1,5 +1,6 @@
 use crate::utils::{rgb_to_hsl, hsl_to_rgb, HSL};
 use crate::vram::VRam;
+use crate::kernel::Kernel;
 
 pub fn red_eye_removal(vram: &mut VRam) {
     for y in 0..vram.height {
@@ -8,16 +9,14 @@ pub fn red_eye_removal(vram: &mut VRam) {
 
                 let hsl: HSL = rgb_to_hsl(r, g, b);
 
-                let is_red = (hsl.hue <= 50.0) || (hsl.hue >= 300.0);
+                let is_red = (hsl.hue <= 20.0) || (hsl.hue >= 340.0);
                 let is_saturated = hsl.saturation > 0.35;
                 let is_midlight = hsl.lightness > 0.05 && hsl.lightness < 0.7;
 
                 if is_red && is_saturated && is_midlight {
-                    // Desaturate strongly and darken
                     let new_sat = hsl.saturation * 0.15;
                     let new_light = hsl.lightness * 0.6;
 
-                    // Optional: slight hue shift towards brown (30°)
                     const TARGET_HUE: f32 = 30.0;
                     const LERP_FACTOR: f32 = 0.6;
 
@@ -38,80 +37,63 @@ pub fn red_eye_removal(vram: &mut VRam) {
     }
 }
 
-/// Aplikuje konvoluční vyhlazení s prahem podle zadání.
-/// F(x,y) = (a ⊗ f)(x,y),  pokud |(a ⊗ f)(x,y) - f(x,y)| < T
-/// F(x,y) = f(x,y),        pokud |(a ⊗ f)(x,y) - f(x,y)| >= T
-///
-/// Kde (a ⊗ f)(x,y) je průměr 3x3 okolí a f(x,y) je původní pixel.
-/// Porovnání se provádí na základě grayscale hodnot, ale aplikuje se plná RGB barva.
-pub fn convolution_smoothing(vram: &mut VRam) {
-    // Prahová hodnota T. Můžeš experimentovat s touto hodnotou.
-    const T: f32 = 30.0;
+pub fn convolution_smoothing(vram: &mut VRam, kernel: &Kernel, threshold: i32) {
+    let source = vram.clone();
+    let mut blurred_result = vram.clone();
 
-    // Váhy pro převod na grayscale
-    const R_WEIGHT: f32 = 0.299;
-    const G_WEIGHT: f32 = 0.587;
-    const B_WEIGHT: f32 = 0.114;
+    let kw = kernel.width as i32;
+    let kh = kernel.height as i32;
+    let half_w = kw / 2;
+    let half_h = kh / 2;
+    let divider = if kernel.divider == 0 { 1 } else { kernel.divider };
 
-    // Vytvoříme kopii VRAM, ze které budeme číst původní hodnoty.
-    // To je klíčové, abychom nečetli již upravené pixely z aktuální iterace.
-    let original_vram = vram.clone();
+    // --- Convolution step ---
+    for y in 0..vram.height as i32 {
+        for x in 0..vram.width as i32 {
+            let mut sum_r = 0;
+            let mut sum_g = 0;
+            let mut sum_b = 0;
 
-    // Projdeme všechny vnitřní pixely (vynecháme 1px okraj pro zjednodušení)
-    for y in 1..(original_vram.height - 1) {
-        for x in 1..(original_vram.width - 1) {
+            for ky in 0..kh {
+                for kx in 0..kw {
+                    // Clamp to edge
+                    let px = (x + kx - half_w).clamp(0, vram.width as i32 - 1);
+                    let py = (y + ky - half_h).clamp(0, vram.height as i32 - 1);
 
-            // 1. Získáme původní barvu centrálního pixelu
-            if let Some((r, g, b)) = original_vram.get_pixel_rgb(x, y) {
-
-                // 2. Spočítáme grayscale hodnotu původního pixelu f(x,y)
-                let f_xy = R_WEIGHT * r as f32 + G_WEIGHT * g as f32 + B_WEIGHT * b as f32;
-
-                // 3. Spočítáme průměr 3x3 okolí (a ⊗ f)(x,y)
-                let mut sum_r: f32 = 0.0;
-                let mut sum_g: f32 = 0.0;
-                let mut sum_b: f32 = 0.0;
-
-                for ky in -1..=1 {
-                    for kx in -1..=1 {
-                        let nx = (x as i32 + kx) as u32;
-                        let ny = (y as i32 + ky) as u32;
-
-                        if let Some((nr, ng, nb)) = original_vram.get_pixel_rgb(nx, ny) {
-                            sum_r += nr as f32;
-                            sum_g += ng as f32;
-                            sum_b += nb as f32;
-                        }
+                    if let Some((r, g, b)) = source.get_pixel_rgb(px as u32, py as u32) {
+                        let w = kernel.get(kx as usize, ky as usize);
+                        sum_r += w * r as i32;
+                        sum_g += w * g as i32;
+                        sum_b += w * b as i32;
                     }
                 }
+            }
 
-                let avg_r = sum_r / 9.0;
-                let avg_g = sum_g / 9.0;
-                let avg_b = sum_b / 9.0;
+            sum_r /= divider;
+            sum_g /= divider;
+            sum_b /= divider;
 
-                // 4. Spočítáme grayscale hodnotu zprůměrovaného pixelu
-                let a_f_xy = R_WEIGHT * avg_r + G_WEIGHT * avg_g + B_WEIGHT * avg_b;
+            let r = sum_r.clamp(0, 255) as u8;
+            let g = sum_g.clamp(0, 255) as u8;
+            let b = sum_b.clamp(0, 255) as u8;
 
-                // 5. Aplikujeme formuli s prahem T
-                let diff = (a_f_xy - f_xy).abs();
+            blurred_result.set_pixel(x as u32, y as u32, r, g, b);
+            vram.set_pixel(x as u32, y as u32, r, g, b);
+        }
+    }
 
-                if diff < T {
-                    // Rozdíl je malý, pixel vyhladíme (použijeme průměrnou hodnotu)
-                    vram.set_pixel(
-                        x,
-                        y,
-                        avg_r.clamp(0.0, 255.0) as u8,
-                        avg_g.clamp(0.0, 255.0) as u8,
-                        avg_b.clamp(0.0, 255.0) as u8
-                    );
-                } else {
-                    // Rozdíl je velký (pravděpodobně hrana), ponecháme původní pixel
-                    vram.set_pixel(x, y, r, g, b);
-                }
+    // --- Threshold step ---
+    for y in 0..vram.height as i32 {
+        for x in 0..vram.width as i32 {
+            let original = source.get_pixel_rgb(x as u32, y as u32).unwrap();
+            let blurred = blurred_result.get_pixel_rgb(x as u32, y as u32).unwrap();
 
+            let diff = (blurred.0 as i32 - original.0 as i32).abs();
+            if diff < threshold {
+                vram.set_pixel(x as u32, y as u32, blurred.0, blurred.1, blurred.2);
+            } else {
+                vram.set_pixel(x as u32, y as u32, original.0, original.1, original.2);
             }
         }
     }
-    // Okrajové pixely (y=0, x=0, y=height-1, x=width-1) jsou záměrně
-    // ponechány beze změny, protože jsme je v smyčce přeskočili.
 }
