@@ -47,7 +47,6 @@ pub fn convolution_smoothing(vram: &mut VRam, kernel: &Kernel, threshold: i32) {
     let half_h = kh / 2;
     let divider = if kernel.divider == 0 { 1 } else { kernel.divider };
 
-    // --- Convolution step ---
     for y in 0..vram.height as i32 {
         for x in 0..vram.width as i32 {
             let mut sum_r = 0;
@@ -82,7 +81,6 @@ pub fn convolution_smoothing(vram: &mut VRam, kernel: &Kernel, threshold: i32) {
         }
     }
 
-    // --- Threshold step ---
     for y in 0..vram.height as i32 {
         for x in 0..vram.width as i32 {
             let original = source.get_pixel_rgb(x as u32, y as u32).unwrap();
