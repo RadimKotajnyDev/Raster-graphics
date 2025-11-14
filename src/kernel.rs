@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[derive(Clone, Debug)]
 pub struct Kernel {
     pub width: usize,
@@ -32,6 +34,20 @@ impl Kernel {
                 kernel.divider += 1;
             }
         }
+        kernel
+    }
+
+    pub fn create_gaussian_blur() -> Self {
+        let mut kernel = Self::new(5);
+        let data = [
+            1, 4, 6, 4, 1,
+            4, 16, 24, 16, 4,
+            6, 24, 36, 24, 6,
+            4, 16, 24, 16, 4,
+            1, 4, 6, 4, 1,
+        ];
+        kernel.data.copy_from_slice(&data);
+        kernel.divider = data.iter().sum();
         kernel
     }
 
