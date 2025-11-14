@@ -17,8 +17,6 @@ pub fn convolution(vram: &mut VRam) {
             for ky in -1..=1 {
                 for kx in -1..=1 {
 
-                    //todo: fix this
-
                     if let Some((r, g, b)) = vram.get_pixel_rgb((x + kx) as u32, (y + ky) as u32) {
                         let weight = kernel[(ky + 1) as usize][(kx + 1) as usize];
 
