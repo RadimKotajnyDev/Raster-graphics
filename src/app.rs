@@ -130,7 +130,7 @@ impl eframe::App for MyApp {
                         let snapshot_start = Instant::now();
 
                         let kernel = Kernel::create_gaussian_blur();
-                        tasks::ku1::convolution_smoothing(&mut self.vram, &kernel, 50);
+                        tasks::ku1::convolution_smoothing(&mut self.vram, &kernel, 15);
 
                         let duration = snapshot_start.elapsed();
                         println!("Convolution smoothing took: {:.2?}", duration);
