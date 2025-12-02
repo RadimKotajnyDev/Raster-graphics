@@ -94,6 +94,7 @@ impl eframe::App for MyApp {
                 .title_bar(false)
                 .collapsible(false)
                 .resizable(false)
+                .movable(false)
                 .open(&mut self.show_edit_menu)
                 .show(ctx, |ui| {
                     let saturate_interaction = ui.add(
