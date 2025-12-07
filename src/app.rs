@@ -1,9 +1,10 @@
 use crate::exercises;
-use crate::vram::VRam;
+use crate::kernel::Kernel;
 use crate::tasks;
+use crate::vram::VRam;
 use eframe::egui::{self, TextureHandle, Vec2};
 use std::time::{Duration, Instant};
-use crate::kernel::Kernel;
+use crate::utils::point::Point;
 
 pub struct MyApp {
     pub vram: VRam,
@@ -14,12 +15,12 @@ pub struct MyApp {
     debounce: Duration,
     original_vram: VRam,
     show_edit_menu: bool,
-    pub is_change_pending: bool
+    pub is_change_pending: bool,
 }
 
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let vram = VRam::new(256, 256);
+        let vram = VRam::new(700, 500);
 
         // exercises::cv01_rgb::exercise_one(&mut vram);
 
@@ -147,6 +148,29 @@ impl eframe::App for MyApp {
 
                         let duration = snapshot_start.elapsed();
                         println!("Convolution took: {:.2?}", duration);
+
+                        self.is_change_pending = true;
+                        self.last_edit_change = Some(Instant::now());
+                    }
+
+                    if ui.button("Draw KU2 Spline (Wave)").clicked() {
+                        let snapshot_start = Instant::now();
+
+                        let control_points = vec![
+                            Point::new(50.0, 200.0),
+                            Point::new(150.0, 50.0),
+                            Point::new(250.0, 250.0),
+                            Point::new(350.0, 100.0),
+                            Point::new(450.0, 250.0),
+                            Point::new(550.0, 150.0),
+                        ];
+
+                        self.vram = VRam::new(self.vram.width, self.vram.height);
+
+                        tasks::ku2::draw_bezier_spline(&mut self.vram, &control_points, 0.01);
+
+                        let duration = snapshot_start.elapsed();
+                        println!("KU2 Spline drawing took: {:.2?}", duration);
 
                         self.is_change_pending = true;
                         self.last_edit_change = Some(Instant::now());

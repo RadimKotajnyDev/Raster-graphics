@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::utils;
+use crate::utils::converters;
 use crate::vram::VRam;
 use num;
 
@@ -21,11 +21,11 @@ pub fn saturate_image(vram: &mut VRam, ratio: f32) {
     for y in 0..vram.height {
         for x in 0..vram.width {
             if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
-                let hsl = utils::rgb_to_hsl(r, g, b);
+                let hsl = converters::rgb_to_hsl(r, g, b);
 
                 let saturation = num::clamp(hsl.saturation + ratio, 0.0, 1.0);
 
-                let rgb = utils::hsl_to_rgb(hsl.hue, saturation, hsl.lightness);
+                let rgb = converters::hsl_to_rgb(hsl.hue, saturation, hsl.lightness);
                 vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
             }
         }
@@ -36,8 +36,8 @@ pub fn hue_shift(vram: &mut VRam, shift: i32) {
     for y in 0..vram.height {
         for x in 0..vram.width {
             if let Some((r, g, b)) = vram.get_pixel_rgb(x, y) {
-                let hsl = utils::rgb_to_hsl(r, g, b);
-                let rgb = utils::hsl_to_rgb(hsl.hue + shift as f32, hsl.saturation, hsl.lightness);
+                let hsl = converters::rgb_to_hsl(r, g, b);
+                let rgb = converters::hsl_to_rgb(hsl.hue + shift as f32, hsl.saturation, hsl.lightness);
                 vram.set_pixel(x, y, rgb.r, rgb.g, rgb.b);
             }
         }

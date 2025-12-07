@@ -1,4 +1,4 @@
-use crate::utils::{rgb_to_hsl, hsl_to_rgb, HSL};
+use crate::utils::converters::{rgb_to_hsl, hsl_to_rgb, HSL};
 use crate::vram::VRam;
 use crate::kernel::Kernel;
 
