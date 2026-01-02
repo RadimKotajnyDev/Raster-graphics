@@ -36,8 +36,8 @@ pub fn draw_clock(vram: &mut VRam, time: ClockTime) {
 
         let (angle_h, angle_m, angle_s) = calculate_angles(&time);
 
-        println!("Čas: {}:{}:{}", time.hours, time.minutes, time.seconds);
-        println!("Úhly -> H: {:.2}, M: {:.2}, S: {:.2}", angle_h, angle_m, angle_s);
+        println!("Time: {}:{}:{}", time.hours, time.minutes, time.seconds);
+        println!("Angles -> H: {:.2}, M: {:.2}, S: {:.2}", angle_h, angle_m, angle_s);
 
         let rot_hod = rotate_image(&hod, angle_h);
         let rot_min = rotate_image(&min, angle_m);
@@ -47,9 +47,9 @@ pub fn draw_clock(vram: &mut VRam, time: ClockTime) {
         blend_image_on_vram(vram, &rot_min, center_x, center_y);
         blend_image_on_vram(vram, &rot_sek, center_x, center_y);
 
-        println!("KU3: Hodiny vykresleny.");
+        println!("KU3: Clocks rendered.");
     } else {
-        eprintln!("Chyba: Nepodařilo se načíst obrázky ze složky 'public/hodiny/'.");
+        eprintln!("Error: Couldn't load images from 'public/hodiny/'.");
     }
 }
 
