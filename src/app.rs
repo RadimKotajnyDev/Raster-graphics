@@ -175,6 +175,24 @@ impl eframe::App for MyApp {
                         self.is_change_pending = true;
                         self.last_edit_change = Some(Instant::now());
                     }
+                    
+                    if ui.button("KU3: Analog Clock (8:18:35)").clicked() {
+                        let snapshot_start = Instant::now();
+
+                        let target_time = tasks::ku3::ClockTime {
+                            hours: 8,
+                            minutes: 18,
+                            seconds: 35,
+                        };
+
+                        tasks::ku3::draw_clock(&mut self.vram, target_time);
+
+                        let duration = snapshot_start.elapsed();
+                        println!("Clock composition took: {:.2?}", duration);
+
+                        self.is_change_pending = true;
+                        self.last_edit_change = Some(Instant::now());
+                    }
 
                     let should_apply = self
                         .last_edit_change
