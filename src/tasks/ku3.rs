@@ -2,17 +2,11 @@ use crate::vram::VRam;
 use image::{DynamicImage, GenericImageView, RgbaImage};
 use std::path::Path;
 
-struct ClockTime {
-    hours: u32,
-    minutes: u32,
-    seconds: u32,
+pub struct ClockTime {
+    pub hours: u32,
+    pub minutes: u32,
+    pub seconds: u32,
 }
-
-const TARGET_TIME: ClockTime = ClockTime {
-    hours: 8,
-    minutes: 18,
-    seconds: 35,
-};
 
 fn calculate_angles(time: &ClockTime) -> (f32, f32, f32) {
     let h = time.hours as f32;
@@ -20,15 +14,13 @@ fn calculate_angles(time: &ClockTime) -> (f32, f32, f32) {
     let s = time.seconds as f32;
 
     let sek_angle = s * 6.0;
-
     let min_angle = m * 6.0 + s * 0.1;
-
     let hod_angle = (h % 12.0) * 30.0 + m * 0.5 + s * (0.5 / 60.0);
 
     (hod_angle, min_angle, sek_angle)
 }
 
-pub fn draw_clock(vram: &mut VRam) {
+pub fn draw_clock(vram: &mut VRam, time: ClockTime) {
     let base_path = Path::new("public/hodiny");
 
     let cifernik = load_image(&base_path.join("cifernikB.png"));
@@ -42,9 +34,9 @@ pub fn draw_clock(vram: &mut VRam) {
         let center_x = vram.width / 2;
         let center_y = vram.height / 2;
 
-        let (angle_h, angle_m, angle_s) = calculate_angles(&TARGET_TIME);
+        let (angle_h, angle_m, angle_s) = calculate_angles(&time);
 
-        println!("Čas: {}:{}:{}", TARGET_TIME.hours, TARGET_TIME.minutes, TARGET_TIME.seconds);
+        println!("Čas: {}:{}:{}", time.hours, time.minutes, time.seconds);
         println!("Úhly -> H: {:.2}, M: {:.2}, S: {:.2}", angle_h, angle_m, angle_s);
 
         let rot_hod = rotate_image(&hod, angle_h);
