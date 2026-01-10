@@ -18,14 +18,18 @@ pub struct MyApp {
     pub is_change_pending: bool,
 }
 
+enum PendingAction {
+    None,
+    RedEye,
+    ConvolutionSmoothing,
+    Convolution,
+    Spline,
+    Clock,
+}
+
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let vram = VRam::new(700, 500);
-
-        // exercises::cv01_rgb::exercise_one(&mut vram);
-
-        // exercises::cv02_images::grayscale(&mut vram);
-        // exercises::cv02_images::saturate_image(&mut vram, 0.5);
 
         let texture = Some(cc.egui_ctx.load_texture(
             "framebuffer",
@@ -45,6 +49,21 @@ impl MyApp {
             is_change_pending: false,
         }
     }
+
+    fn run_benchmark<F>(&mut self, name: &str, operation: F)
+    where
+        F: FnOnce(&mut VRam),
+    {
+        let start = Instant::now();
+
+        operation(&mut self.vram);
+
+        let duration = start.elapsed();
+        println!("{} took: {:.2?}", name, duration);
+
+        self.is_change_pending = true;
+        self.last_edit_change = Some(Instant::now());
+    }
 }
 
 impl eframe::App for MyApp {
@@ -54,11 +73,8 @@ impl eframe::App for MyApp {
                 if ui.button("Load Image").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Ok(img) = image::open(&path) {
-
                             self.vram.set_from_dynamic_image(&img);
-
                             self.original_vram = self.vram.clone();
-
                             self.texture = Some(ctx.load_texture(
                                 "framebuffer",
                                 self.vram.to_color_image(),
@@ -71,7 +87,8 @@ impl eframe::App for MyApp {
                 if ui.button("Save as PNG").clicked() {
                     if let Some(mut path) = rfd::FileDialog::new()
                         .add_filter("PNG Image", &["png"])
-                        .save_file() {
+                        .save_file()
+                    {
                         let is_png = path
                             .extension()
                             .and_then(|s| s.to_str())
@@ -90,6 +107,8 @@ impl eframe::App for MyApp {
             });
         });
 
+        let mut action_to_run = PendingAction::None;
+
         if self.show_edit_menu {
             if let Some(win) = egui::Window::new("Edit image")
                 .title_bar(false)
@@ -102,96 +121,33 @@ impl eframe::App for MyApp {
                         egui::Slider::new(&mut self.saturation, -1.0..=1.0).text("Saturation"),
                     );
 
-                    let hue_interaction = ui
-                        .add(egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)"));
-
-                    let convolution_button = ui.add(egui::Button::new("Convolution"));
-
-                    let red_eye_removal_button = ui.add(egui::Button::new("Remove red eyes"));
-
-                    let convolution_smoothing_button = ui.add(egui::Button::new("Convolution smoothing"));
+                    let hue_interaction = ui.add(
+                        egui::Slider::new(&mut self.hue, 0.0..=360.0).text("Hue (deg 0-360)"),
+                    );
 
                     if saturate_interaction.changed() || hue_interaction.changed() {
                         self.last_edit_change = Some(Instant::now());
                         self.is_change_pending = false;
                     }
 
-                    if red_eye_removal_button.clicked() {
-                        let snapshot_start = Instant::now();
-
-                        tasks::ku1::red_eye_removal(&mut self.vram);
-
-                        let duration = snapshot_start.elapsed();
-                        println!("Red eye removal took: {:.2?}", duration);
-
-                        self.is_change_pending = true;
-                        self.last_edit_change = Some(Instant::now());
+                    if ui.add(egui::Button::new("Remove red eyes")).clicked() {
+                        action_to_run = PendingAction::RedEye;
                     }
 
-                    if convolution_smoothing_button.clicked() {
-                        let snapshot_start = Instant::now();
-
-                        let kernel = Kernel::create_gaussian_blur();
-                        tasks::ku1::convolution_smoothing(&mut self.vram, &kernel, 15);
-
-                        let duration = snapshot_start.elapsed();
-                        println!("Convolution smoothing took: {:.2?}", duration);
-
-                        self.is_change_pending = true;
-                        self.last_edit_change = Some(Instant::now());
+                    if ui.add(egui::Button::new("Convolution smoothing")).clicked() {
+                        action_to_run = PendingAction::ConvolutionSmoothing;
                     }
 
-                    if convolution_button.clicked() {
-                        let snapshot_start = Instant::now();
-
-                        exercises::cv03_convolution::convolution(&mut self.vram);
-
-                        let duration = snapshot_start.elapsed();
-                        println!("Convolution took: {:.2?}", duration);
-
-                        self.is_change_pending = true;
-                        self.last_edit_change = Some(Instant::now());
+                    if ui.add(egui::Button::new("Convolution")).clicked() {
+                        action_to_run = PendingAction::Convolution;
                     }
 
                     if ui.button("Draw KU2 Spline (Wave)").clicked() {
-                        let snapshot_start = Instant::now();
-
-                        let control_points = vec![
-                            Point::new(50.0, 200.0),
-                            Point::new(150.0, 50.0),
-                            Point::new(250.0, 250.0),
-                            Point::new(350.0, 100.0),
-                            Point::new(450.0, 250.0),
-                            Point::new(550.0, 150.0),
-                        ];
-
-                        self.vram = VRam::new(self.vram.width, self.vram.height);
-
-                        tasks::ku2::draw_bezier_spline(&mut self.vram, &control_points, 0.01);
-
-                        let duration = snapshot_start.elapsed();
-                        println!("KU2 Spline drawing took: {:.2?}", duration);
-
-                        self.is_change_pending = true;
-                        self.last_edit_change = Some(Instant::now());
+                        action_to_run = PendingAction::Spline;
                     }
-                    
+
                     if ui.button("KU3: Analog Clock (8:18:35)").clicked() {
-                        let snapshot_start = Instant::now();
-
-                        let target_time = tasks::ku3::ClockTime {
-                            hours: 8,
-                            minutes: 18,
-                            seconds: 35,
-                        };
-
-                        tasks::ku3::draw_clock(&mut self.vram, target_time);
-
-                        let duration = snapshot_start.elapsed();
-                        println!("Clock composition took: {:.2?}", duration);
-
-                        self.is_change_pending = true;
-                        self.last_edit_change = Some(Instant::now());
+                        action_to_run = PendingAction::Clock;
                     }
 
                     let should_apply = self
@@ -207,11 +163,17 @@ impl eframe::App for MyApp {
                             self.vram = self.original_vram.clone();
 
                             if self.saturation != 0.0 {
-                                exercises::cv02_images::saturate_image(&mut self.vram, self.saturation);
+                                exercises::cv02_images::saturate_image(
+                                    &mut self.vram,
+                                    self.saturation,
+                                );
                             }
 
                             if self.hue != 0.0 {
-                                exercises::cv02_images::hue_shift(&mut self.vram, self.hue.round() as i32);
+                                exercises::cv02_images::hue_shift(
+                                    &mut self.vram,
+                                    self.hue.round() as i32,
+                                );
                             }
 
                             let duration = snapshot_start.elapsed();
@@ -242,6 +204,51 @@ impl eframe::App for MyApp {
             }
         }
 
+        match action_to_run {
+            PendingAction::None => {}
+            PendingAction::RedEye => {
+                self.run_benchmark("Red eye removal", |vram| {
+                    tasks::ku1::red_eye_removal(vram);
+                });
+            }
+            PendingAction::ConvolutionSmoothing => {
+                self.run_benchmark("Convolution smoothing", |vram| {
+                    let kernel = Kernel::create_gaussian_blur();
+                    tasks::ku1::convolution_smoothing(vram, &kernel, 15);
+                });
+            }
+            PendingAction::Convolution => {
+                self.run_benchmark("Convolution", |vram| {
+                    exercises::cv03_convolution::convolution(vram);
+                });
+            }
+            PendingAction::Spline => {
+                self.run_benchmark("KU2 Spline drawing", |vram| {
+                    let control_points = vec![
+                        Point::new(50.0, 200.0),
+                        Point::new(150.0, 50.0),
+                        Point::new(250.0, 250.0),
+                        Point::new(350.0, 100.0),
+                        Point::new(450.0, 250.0),
+                        Point::new(550.0, 150.0),
+                    ];
+                    *vram = VRam::new(vram.width, vram.height);
+                    tasks::ku2::draw_bezier_spline(vram, &control_points, 0.01);
+                });
+            }
+            PendingAction::Clock => {
+                self.run_benchmark("Clock composition", |vram| {
+                    let target_time = tasks::ku3::ClockTime {
+                        hours: 8,
+                        minutes: 18,
+                        seconds: 35,
+                    };
+                    tasks::ku3::draw_clock(vram, target_time);
+                });
+            }
+        }
+
+        // Vykreslení centrálního panelu
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(tex) = &self.texture {
                 if self.last_edit_change.is_some() {
